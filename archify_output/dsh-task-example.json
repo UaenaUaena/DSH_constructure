@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "用户任务 × Agent 执行 — 端到端数据流",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [1060, 800],
+    "output": "archify_output/dsh-task-example.html",
+    "views": [
+      { "id": "launch", "label": "发起与装配", "focus": ["user", "entry", "core"], "note": "任务经入口进入 core；core 按 preset 装配该会话能力集并开 turn。" },
+      { "id": "model-loop", "label": "模型 × 工具循环", "focus": ["core", "llm", "deepseek", "capabilities", "sandbox"], "note": "每个 step：core 请求模型，模型决定调工具，工具在沙箱执行后回流上下文。" },
+      { "id": "guard-delegate", "label": "守卫与委托", "focus": ["guard", "subagent", "capabilities", "core"], "note": "守卫守护超时/重复调用，复杂分析委托给子代理完成。" },
+      { "id": "finalize", "label": "总结下发", "focus": ["core", "llm", "entry", "user"], "note": "最终经 core→api(events+calls)→sdk→webapp 推给用户。" }
+    ]
+  },
+  "participants": [
+    { "id": "user", "type": "external", "label": "用户", "sublabel": "Web · CLI" },
+    { "id": "entry", "type": "backend", "label": "入口", "sublabel": "webapp · cli · sdk" },
+    { "id": "core", "type": "backend", "label": "Core 主干", "sublabel": "agent-loop · tools" },
+    { "id": "guard", "type": "security", "label": "守卫", "sublabel": "hygiene · 超时" },
+    { "id": "llm", "type": "backend", "label": "模型接入", "sublabel": "ctx.llm · provider" },
+    { "id": "deepseek", "type": "external", "label": "DeepSeek API", "sublabel": "模型服务" },
+    { "id": "capabilities", "type": "backend", "label": "能力接缝", "sublabel": "shell · fs · skill" },
+    { "id": "sandbox", "type": "cloud", "label": "沙箱执行", "sublabel": "workspace 受限" },
+    { "id": "subagent", "type": "backend", "label": "子代理", "sublabel": "ctx.subagents" }
+  ],
+  "messages": [
+    { "id": "submit", "from": "user", "to": "entry", "y": 176, "label": "提交任务：调研+改 markdown+跑测试", "variant": "emphasis", "note": "入口=webapp/cli 经 api→sdk（JSON-RPC over WS/stdio）进入 core。" },
+    { "id": "open-session", "from": "entry", "to": "core", "y": 204, "label": "open session + user/message", "note": "session 记 turn/start 与 user/message；core 按 preset 装配能力集。" },
+    { "id": "req-1", "from": "core", "to": "llm", "y": 232, "label": "step 请求：组装 prompt + tool schemas" },
+    { "id": "call-1", "from": "llm", "to": "deepseek", "y": 260, "label": "translate → stream call", "variant": "emphasis" },
+    { "id": "stream-1", "from": "deepseek", "to": "llm", "y": 288, "label": "assistant/chunk 流式回", "variant": "return" },
+    { "id": "msg-1", "from": "llm", "to": "core", "y": 316, "label": "assistant/message：需读 agent-loop 源码", "variant": "return" },
+    { "id": "tool-1", "from": "core", "to": "capabilities", "y": 344, "label": "tool 分发：fs.search / read", "variant": "emphasis" },
+    { "id": "sandbox-1", "from": "capabilities", "to": "sandbox", "y": 372, "label": "受控读文件（read-only）" },
+    { "id": "sandbox-rt1", "from": "sandbox", "to": "capabilities", "y": 400, "label": "源码 / 符号片段", "variant": "return" },
+    { "id": "tool-2", "from": "core", "to": "capabilities", "y": 428, "label": "tool 分发：tool-subagent（深分析）" },
+    { "id": "spawn", "from": "capabilities", "to": "subagent", "y": 456, "label": "spawn 子 agent 分析调用图/风险", "variant": "emphasis" },
+    { "id": "spawn-rt", "from": "subagent", "to": "capabilities", "y": 484, "label": "调用图 + 风险点", "variant": "return" },
+    { "id": "tool-rt2", "from": "capabilities", "to": "core", "y": 512, "label": "tool/result 并入上下文", "variant": "return" },
+    { "id": "guard-set", "from": "core", "to": "guard", "y": 540, "label": "为 test 调用设超时限", "variant": "security", "note": "guard 同时监控重复工具调用，避免死循环。" },
+    { "id": "guard-ok", "from": "guard", "to": "core", "y": 568, "label": "deadline ok", "variant": "return" },
+    { "id": "tool-3", "from": "core", "to": "capabilities", "y": 596, "label": "tool 分发：fs.write + shell 跑测试", "variant": "emphasis" },
+    { "id": "sandbox-2", "from": "capabilities", "to": "sandbox", "y": 624, "label": "受控写/执行（workspace 受限）" },
+    { "id": "sandbox-rt2", "from": "sandbox", "to": "capabilities", "y": 652, "label": "写入并测试通过", "variant": "return" },
+    { "id": "req-2", "from": "core", "to": "llm", "y": 680, "label": "final step：中文总结 + 回执下发", "note": "总结经 deepseek 外部流式调用，与上方 model 路径一致；回执经 core→api→sdk→webapp。" }
+  ],
+  "activations": [
+    { "participant": "core", "from": 204, "to": 690, "type": "backend" },
+    { "participant": "llm", "from": 227, "to": 321, "type": "backend" },
+    { "participant": "deepseek", "from": 255, "to": 293, "type": "external" },
+    { "participant": "capabilities", "from": 339, "to": 409, "type": "backend" },
+    { "participant": "sandbox", "from": 367, "to": 405, "type": "cloud" },
+    { "participant": "capabilities", "from": 423, "to": 517, "type": "backend" },
+    { "participant": "subagent", "from": 451, "to": 489, "type": "backend" },
+    { "participant": "guard", "from": 535, "to": 573, "type": "security" },
+    { "participant": "capabilities", "from": 591, "to": 657, "type": "backend" },
+    { "participant": "sandbox", "from": 619, "to": 657, "type": "cloud" },
+    { "participant": "llm", "from": 675, "to": 685, "type": "backend" }
+  ]
+}

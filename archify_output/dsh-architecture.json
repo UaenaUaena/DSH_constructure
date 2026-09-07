@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "DeepSeek Harness — 全插件 Agent 架构",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "viewBox": [1180, 640],
+    "views": [
+      {
+        "id": "main-path",
+        "label": "主调用链路",
+        "focus": ["cli", "core", "llm", "deepseek", "capabilities", "sandbox"],
+        "note": "从 dsh CLI / Web 入口，经 Core 主干到模型调用与工具执行。"
+      },
+      {
+        "id": "capability-seams",
+        "label": "能力接缝",
+        "focus": ["core", "capabilities", "subagent", "sandbox", "guard"],
+        "note": "Service Definition / Provider / Consumer 组成的能力接缝与守卫。"
+      }
+    ]
+  },
+  "components": [
+    { "id": "deepseek", "type": "external", "label": "DeepSeek API", "sublabel": "模型服务", "pos": [60, 90], "size": [140, 52] },
+    { "id": "llm", "type": "backend", "label": "模型接入", "sublabel": "Service + Provider", "pos": [330, 90], "size": [140, 52] },
+    { "id": "sdk", "type": "backend", "label": "SDK 协议", "sublabel": "JSON-RPC server", "pos": [540, 90], "size": [150, 52] },
+    { "id": "preset", "type": "backend", "label": "装配 / 预设", "sublabel": "preset 编排", "pos": [800, 90], "size": [150, 52] },
+    { "id": "cli", "type": "external", "label": "dsh CLI", "sublabel": "命令行入口", "pos": [60, 330], "size": [140, 56] },
+    { "id": "core", "type": "backend", "label": "Core 主干", "sublabel": "agent-loop · session · tools · prompt", "pos": [330, 330], "size": [180, 64] },
+    { "id": "api", "type": "backend", "label": "远程 BFF", "sublabel": "Typert RPC 网关", "pos": [800, 330], "size": [150, 56] },
+    { "id": "webapp", "type": "frontend", "label": "Web 客户端", "sublabel": "apps/web · 纯客户端", "pos": [1000, 330], "size": [150, 56] },
+    { "id": "sandbox", "type": "cloud", "label": "沙箱执行", "sublabel": "本地 subprocess · E2B", "pos": [60, 560], "size": [140, 52] },
+    { "id": "capabilities", "type": "backend", "label": "能力接缝", "sublabel": "shell · fs · subprocess · web · skill", "pos": [330, 560], "size": [180, 56] },
+    { "id": "guard", "type": "security", "label": "守卫", "sublabel": "hygiene · 超时", "pos": [540, 560], "size": [150, 56] },
+    { "id": "subagent", "type": "backend", "label": "子代理", "sublabel": "providers · 委托", "pos": [800, 560], "size": [150, 56] }
+  ],
+  "boundaries": [
+    {
+      "kind": "security-group",
+      "label": "Harness 进程（Cordis 插件树）",
+      "wraps": ["core", "llm", "sdk", "preset", "api", "capabilities", "guard", "subagent"],
+      "pad": 10
+    }
+  ],
+  "connections": [
+    { "id": "cli-core", "from": "cli", "to": "core", "label": "任务请求", "variant": "emphasis", "fromSide": "right", "toSide": "left", "labelAt": [265, 350] },
+    { "id": "core-llm", "from": "core", "to": "llm", "label": "step 请求", "fromSide": "top", "toSide": "bottom", "labelAt": [420, 236] },
+    { "id": "llm-deepseek", "from": "llm", "to": "deepseek", "label": "model 调用", "variant": "emphasis", "fromSide": "left", "toSide": "right", "labelAt": [265, 100] },
+    { "id": "core-caps", "from": "core", "to": "capabilities", "label": "tool 分发", "fromSide": "bottom", "toSide": "top", "labelAt": [370, 478] },
+    { "id": "caps-sandbox", "from": "capabilities", "to": "sandbox", "label": "执行", "variant": "dashed", "fromSide": "left", "toSide": "right", "labelAt": [265, 572] },
+    { "id": "api-core", "from": "api", "to": "core", "label": "读会话", "fromSide": "left", "toSide": "right", "labelAt": [680, 350] },
+    { "id": "preset-api", "from": "preset", "to": "api", "label": "装配", "fromSide": "bottom", "toSide": "top", "labelAt": [875, 236] },
+    { "id": "webapp-api", "from": "webapp", "to": "api", "label": "RPC 调用", "fromSide": "left", "toSide": "right", "labelAt": [975, 346] },
+    { "id": "sdk-core", "from": "sdk", "to": "core", "label": "JSON-RPC 驱动", "fromSide": "bottom", "toSide": "top", "via": [[615, 300], [420, 300]], "labelAt": [560, 290] },
+    { "id": "guard-core", "from": "guard", "to": "core", "label": "卫生 / 超时", "variant": "security", "fromSide": "top", "toSide": "bottom", "via": [[615, 440], [420, 440]], "labelAt": [535, 430] },
+    { "id": "core-subagent", "from": "core", "to": "subagent", "label": "tool 委托", "fromSide": "bottom", "toSide": "top", "via": [[420, 480], [875, 480]], "labelAt": [700, 470] }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "核心主干", "items": ["session · agent-loop · system-prompt · tools 组成产品 API 主干", "模型可见信息即日志可重建：新的模型可见输入必有会话事件", "step = 模型请求 + 工具；turn = 0 或多个 step"] },
+    { "dot": "amber", "title": "能力接缝", "items": ["一个接缝完整包含 Service Definition / Provider / Consumer 三职", "新行为走已文档化扩展点，绝不改动 agent-loop 内环", "每个包都是插件：模型适配、工具注册、会话日志、代理循环均可由配置替换", "仅 dsh profiles 启动应用：web · headless · sdk · sdk-minimal · acp"] }
+  ]
+}

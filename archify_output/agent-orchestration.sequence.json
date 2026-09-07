@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Agent 作为统筹中枢 — 一次任务的闭环",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [1060, 585],
+    "views": [
+      {
+        "id": "step-loop",
+        "label": "Step 循环",
+        "focus": ["agent", "llm", "session"],
+        "note": "Agent 每次向 LLM 请求一步；无工具调用即结束，否则继续下一步。"
+      },
+      {
+        "id": "tool-path",
+        "label": "工具分发",
+        "focus": ["agent", "tools", "fscmcp"],
+        "note": "工具调用经调度器执行，结果与新增上下文回到 Agent。"
+      }
+    ]
+  },
+  "participants": [
+    { "id": "user", "type": "external", "label": "用户", "sublabel": "输入 / 反馈" },
+    { "id": "agent", "type": "backend", "label": "Agent 中枢", "sublabel": "agent-loop" },
+    { "id": "llm", "type": "cloud", "label": "LLM", "sublabel": "DeepSeek API" },
+    { "id": "session", "type": "database", "label": "会话日志", "sublabel": "可重建信号" },
+    { "id": "tools", "type": "messagebus", "label": "工具总线", "sublabel": "注册 + 调度" },
+    { "id": "fscmcp", "type": "external", "label": "文件 / MCP", "sublabel": "读写 · 外部工具" }
+  ],
+  "segments": [
+    { "from": 166, "to": 238, "label": "人机对话" },
+    { "from": 254, "to": 336, "label": "Agent ↔ LLM 推理" },
+    { "from": 352, "to": 502, "label": "工具执行，回馈循环" }
+  ],
+  "messages": [
+    { "from": "user", "to": "agent", "y": 176, "label": "任务 / 提问", "variant": "emphasis" },
+    { "from": "agent", "to": "session", "y": 204, "label": "写入 user 消息", "variant": "default" },
+    { "from": "agent", "to": "llm", "y": 262, "label": "step 请求（组装消息）", "variant": "emphasis" },
+    { "from": "llm", "to": "agent", "y": 290, "label": "流式响应 / tool-call", "variant": "return" },
+    { "from": "agent", "to": "session", "y": 318, "label": "写入 assistant 消息", "variant": "default" },
+    { "from": "agent", "to": "tools", "y": 374, "label": "executeToolCalls 分发", "variant": "emphasis" },
+    { "from": "tools", "to": "fscmcp", "y": 402, "label": "调度：prepare → dispatch → finish", "variant": "default" },
+    { "from": "fscmcp", "to": "tools", "y": 430, "label": "文件 / MCP 结果或新上下文", "variant": "return" },
+    { "from": "tools", "to": "agent", "y": 458, "label": "结果 + additionalContexts", "variant": "default" },
+    { "from": "agent", "to": "llm", "y": 486, "label": "下一步 step（循环）", "variant": "dashed" }
+  ],
+  "activations": [
+    { "participant": "agent", "from": 176, "to": 486, "type": "backend" },
+    { "participant": "session", "from": 204, "to": 318, "type": "database" },
+    { "participant": "tools", "from": 374, "to": 462, "type": "messagebus" },
+    { "participant": "fscmcp", "from": 402, "to": 434, "type": "external" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Agent 三步统筹", "items": ["① 认领用户输入（inbox.claim）并组装提示", "② 向 LLM 取一步决策（step 请求）", "③ 有 tool-call 就分发执行，否则本轮结束"] },
+    { "dot": "emerald", "title": "模型可见 ⟺ 日志可重建", "items": ["每次模型可见输入 / 输出都写入会话事件", "下一步请求 = session.deriveMessages() 对日志的投影", "文件/MCP 产生的新上下文（additionalContexts）也回灌会话，闭环可恢复"] },
+    { "dot": "amber", "title": "工具调度", "items": ["并行 / 串行分组由 executionMode 决定", "prepare → dispatch → finish/post-result 调度器", "文件、MCP、shell 等都是同一套工具总线"] }
+  ]
+}
