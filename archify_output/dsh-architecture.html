@@ -5039,11 +5039,12 @@
         <path data-edge-from="core" data-edge-to="capabilities" data-edge-label="tool 分发" data-edge-key="3" data-edge-id="core-caps" data-composition-points="420,394;420,560" d="M 420 394 L 420 560" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         <path data-edge-from="capabilities" data-edge-to="sandbox" data-edge-label="执行" data-edge-key="4" data-edge-id="caps-sandbox" data-composition-points="330,588;306,588;306,604;224,604;224,586;200,586" d="M 330 588 L 314 588 Q 306 588 306 596 L 306 596 Q 306 604 298 604 L 232 604 Q 224 604 224 596 L 224 594 Q 224 586 216 586 L 200 586" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
         <path data-edge-from="api" data-edge-to="core" data-edge-label="读会话" data-edge-key="5" data-edge-id="api-core" data-composition-points="800,358;776,358;776,378;534,378;534,362;510,362" d="M 800 358 L 784 358 Q 776 358 776 366 L 776 370 Q 776 378 768 378 L 542 378 Q 534 378 534 370 L 534 370 Q 534 362 526 362 L 510 362" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="preset" data-edge-to="api" data-edge-label="装配" data-edge-key="6" data-edge-id="preset-api" data-composition-points="875,142;875,330" d="M 875 142 L 875 330" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="webapp" data-edge-to="api" data-edge-label="RPC 调用" data-edge-key="7" data-edge-id="webapp-api" data-composition-points="1000,358;950,358" d="M 1000 358 L 950 358" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="sdk" data-edge-to="core" data-edge-label="JSON-RPC 驱动" data-edge-key="8" data-edge-id="sdk-core" data-composition-points="615,142;615,300;420,300;420,330" d="M 615 142 L 615 292 Q 615 300 607 300 L 428 300 Q 420 300 420 308 L 420 330" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="guard" data-edge-to="core" data-edge-label="卫生 / 超时" data-edge-key="9" data-edge-id="guard-core" data-composition-points="615,560;615,440;420,440;420,394" d="M 615 560 L 615 448 Q 615 440 607 440 L 428 440 Q 420 440 420 432 L 420 394" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
-        <path data-edge-from="core" data-edge-to="subagent" data-edge-label="tool 委托" data-edge-key="10" data-edge-id="core-subagent" data-composition-points="420,394;420,480;875,480;875,560" d="M 420 394 L 420 472 Q 420 480 428 480 L 867 480 Q 875 480 875 488 L 875 560" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="preset" data-edge-to="api" data-edge-label="代理 agentPreset" data-edge-key="6" data-edge-id="preset-api" data-composition-points="875,142;875,330" d="M 875 142 L 875 330" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="preset" data-edge-to="core" data-edge-label="装配 agent" data-edge-key="7" data-edge-id="preset-core" data-composition-points="875,142;875,300;420,300;420,330" d="M 875 142 L 875 292 Q 875 300 867 300 L 428 300 Q 420 300 420 308 L 420 330" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="webapp" data-edge-to="api" data-edge-label="RPC 调用" data-edge-key="8" data-edge-id="webapp-api" data-composition-points="1000,358;950,358" d="M 1000 358 L 950 358" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="sdk" data-edge-to="core" data-edge-label="JSON-RPC 驱动" data-edge-key="9" data-edge-id="sdk-core" data-composition-points="615,142;615,300;420,300;420,330" d="M 615 142 L 615 292 Q 615 300 607 300 L 428 300 Q 420 300 420 308 L 420 330" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="guard" data-edge-to="core" data-edge-label="卫生 / 超时" data-edge-key="10" data-edge-id="guard-core" data-composition-points="615,560;615,440;420,440;420,394" d="M 615 560 L 615 448 Q 615 440 607 440 L 428 440 Q 420 440 420 432 L 420 394" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
+        <path data-edge-from="core" data-edge-to="subagent" data-edge-label="tool 委托" data-edge-key="11" data-edge-id="core-subagent" data-composition-points="420,394;420,480;875,480;875,560" d="M 420 394 L 420 472 Q 420 480 428 480 L 867 480 Q 875 480 875 488 L 875 560" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
 
         <!-- Components -->
         <g id="node-deepseek" data-node-id="deepseek" data-node-label="DeepSeek API" tabindex="0" role="button" aria-label="聚焦DeepSeek API，模型服务, 架构组件" aria-pressed="false" data-node-kind="external" data-node-sublabel="模型服务" data-node-context="架构组件">
@@ -5209,23 +5210,27 @@
           <rect x="660.6" y="340" width="38.8" height="14" rx="3" class="c-mask"/>
           <text x="680" y="350" class="t-muted" font-size="8" text-anchor="middle">读会话</text>
         </g>
-        <g data-detail="context" data-edge-from="preset" data-edge-to="api" data-edge-label="装配" data-edge-key="6" data-edge-id="preset-api">
-          <rect x="860" y="226" width="30" height="14" rx="3" class="c-mask"/>
-          <text x="875" y="236" class="t-muted" font-size="8" text-anchor="middle">装配</text>
+        <g data-detail="context" data-edge-from="preset" data-edge-to="api" data-edge-label="代理 agentPreset" data-edge-key="6" data-edge-id="preset-api">
+          <rect x="891.6" y="226" width="86.8" height="14" rx="3" class="c-mask"/>
+          <text x="935" y="236" class="t-muted" font-size="8" text-anchor="middle">代理 agentPreset</text>
         </g>
-        <g data-detail="context" data-edge-from="webapp" data-edge-to="api" data-edge-label="RPC 调用" data-edge-key="7" data-edge-id="webapp-api">
+        <g data-detail="context" data-edge-from="preset" data-edge-to="core" data-edge-label="装配 agent" data-edge-key="7" data-edge-id="preset-core">
+          <rect x="619" y="282" width="58" height="14" rx="3" class="c-mask"/>
+          <text x="648" y="292" class="t-muted" font-size="8" text-anchor="middle">装配 agent</text>
+        </g>
+        <g data-detail="context" data-edge-from="webapp" data-edge-to="api" data-edge-label="RPC 调用" data-edge-key="8" data-edge-id="webapp-api">
           <rect x="950.8" y="336" width="48.4" height="14" rx="3" class="c-mask"/>
           <text x="975" y="346" class="t-muted" font-size="8" text-anchor="middle">RPC 调用</text>
         </g>
-        <g data-detail="context" data-edge-from="sdk" data-edge-to="core" data-edge-label="JSON-RPC 驱动" data-edge-key="8" data-edge-id="sdk-core">
+        <g data-detail="context" data-edge-from="sdk" data-edge-to="core" data-edge-label="JSON-RPC 驱动" data-edge-key="9" data-edge-id="sdk-core">
           <rect x="523.8" y="280" width="72.4" height="14" rx="3" class="c-mask"/>
           <text x="560" y="290" class="t-muted" font-size="8" text-anchor="middle">JSON-RPC 驱动</text>
         </g>
-        <g data-detail="context" data-edge-from="guard" data-edge-to="core" data-edge-label="卫生 / 超时" data-edge-key="9" data-edge-id="guard-core">
+        <g data-detail="context" data-edge-from="guard" data-edge-to="core" data-edge-label="卫生 / 超时" data-edge-key="10" data-edge-id="guard-core">
           <rect x="503.6" y="420" width="62.8" height="14" rx="3" class="c-mask"/>
           <text x="535" y="430" class="t-security" font-size="8" text-anchor="middle">卫生 / 超时</text>
         </g>
-        <g data-detail="context" data-edge-from="core" data-edge-to="subagent" data-edge-label="tool 委托" data-edge-key="10" data-edge-id="core-subagent">
+        <g data-detail="context" data-edge-from="core" data-edge-to="subagent" data-edge-label="tool 委托" data-edge-key="11" data-edge-id="core-subagent">
           <rect x="673.4" y="460" width="53.199999999999996" height="14" rx="3" class="c-mask"/>
           <text x="700" y="470" class="t-muted" font-size="8" text-anchor="middle">tool 委托</text>
         </g>
