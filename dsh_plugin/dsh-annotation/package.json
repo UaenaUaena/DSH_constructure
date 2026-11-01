@@ -1,0 +1,39 @@
+{
+  "name": "@local/dsh-annotation",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "description": "In-place annotation: select a term in the transcript, explain it inside the current conversation, and turn that word into a permanent link to the generated note.",
+  "license": "MIT",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-session",
+        "@deepseek-ai/dsh-client-ui-sidebar-right"
+      ]
+    }
+  },
+  "meta": {
+    "title": "原位批注",
+    "description": "选中正文里的一个词，基于当前对话生成解释写入笔记，并把这个词原地变成指向该笔记的链接。"
+  },
+  "icon": "./icon.svg",
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "icon.svg",
+    "locale/*.json",
+    "README.md"
+  ]
+}

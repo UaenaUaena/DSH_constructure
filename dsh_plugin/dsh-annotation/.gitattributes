@@ -1,0 +1,6 @@
+# The package is plain text; keep one line ending in the repository so a
+# Windows checkout cannot rewrite these files.
+* text=auto eol=lf
+
+# The installable artifact is a tarball, not text.
+*.tgz binary

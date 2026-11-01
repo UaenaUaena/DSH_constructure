@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="原位批注">
+  <rect x="4" y="6" width="56" height="52" rx="10" fill="none" stroke="currentColor" stroke-width="3" opacity="0.45"/>
+  <path d="M16 22h32M16 32h32M16 42h20" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+  <path d="M38 40c4-2 6-6 6-10 0-5-4-8-9-8-4 0-8 2-9 6" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
+  <circle cx="26" cy="28" r="3.4" fill="currentColor"/>
+</svg>

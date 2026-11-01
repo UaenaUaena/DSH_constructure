@@ -1,0 +1,14 @@
+# In-place annotation bundle: one Host row plus its browser half.
+#
+# `notesDir` is workspace-relative and owns where explanations accumulate; the
+# plugin creates it on the first annotation of a session and writes ONE file per
+# annotated term inside it, so a growing collection stays navigable.
+# `provider`/`model` pin the explanation route; omit both to use the profile's
+# default model selection.
+- insert:
+    - id: annotation
+      name: '@local/dsh-annotation'
+      config:
+        notesDir: notes/注解
+        maxTokens: 3000
+        timeoutMs: 120000
