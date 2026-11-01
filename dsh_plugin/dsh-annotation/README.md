@@ -5,13 +5,33 @@
 ## 交互
 
 1. 在对话正文里选中一个词（或短语）。
-2. 触发方式三选一：
-   - 选区旁浮出的按钮「解释「词」」
-   - 在选区上**右键**
+2. 松手即出浮层，**光标已经在输入框里**，可以直接打字：`[可写要求] [解释「词」] · 回车解释 · Esc 取消`
+   - 选区旁自动浮出（无需点击输入框）
    - 快捷键 `Alt+Shift+E`
+   - 在选区上**右键**
+
+   **输入框是可选的**：留空直接回车 / 点「解释」= 按默认逻辑；写了要求（如「对比一下它和缓冲区的区别」）= 按你的要求生成。
 3. 插件把 `会话 + 该消息 + 该词 + 上下文` 发给 Host；Host 调一次模型，把解释写进**该词自己的文件** `<工作区>/notes/注解/<词>.md`，并把批注记录写入 `$DSH_HOME/annotations/<sessionId>.json`。
 4. 右侧栏立刻打开这个词的笔记并定位到这一条；这个词在原位置变成带下划线的链接。
 5. 刷新页面/切换会话再回来，链接由批注表重新贴回原词——只匹配文字，不依赖任何 hash 过的 class 名。
+
+**人工提示词**会作为 `user_request` 交给模型，并且写进笔记：
+
+```md
+## 语境 2
+
+> 语境：…**背压**… · 2026-11-01 23:40
+> 你的提问：对比一下它和缓冲区的区别
+
+<按这条要求生成的解释>
+```
+
+提示词只用于**约束这次解释的角度**，不会把插件变成通用问答：system prompt 仍要求"只围绕选中的词展开"。留空时请求里根本没有 `user_request`，与之前完全一致。
+
+输入框抢走光标之后还有两个细节：
+
+- **选中的词仍然高亮**。焦点进 input 会让浏览器丢掉原生选区，所以插件用 CSS Custom Highlight（`::highlight()`，Chrome 105+/Safari 17.2+，不支持就自动跳过）把那段 range 重新画出来，你随时知道自己选的是哪几个字。
+- **Cmd/Ctrl+C 照常复制**。输入框为空时按复制键，复制的是你选中的那段文字，然后浮层关掉——不会因为光标在输入框里就复制了个空。
 
 **一词一文件**：`响应式` 与 `非阻塞` 分别落到 `notes/注解/响应式.md`、`notes/注解/非阻塞.md`。同一个词在不同语境里再批注一次，**不新建文件**，而是在该词文件里追加 `## 语境 2`，链接定位到对应小节。这样笔记数量增长时仍然一术语一页，而不是一个越写越长的总表。
 
@@ -44,26 +64,25 @@ node install.mjs --dry-run           # 只打包、打印命令，不动 profile
 这个目录本身就是**一个完整、自包含的 npm 包**，可以直接当作一个独立仓库的根推上去。仓库里已经有 `.gitattributes`
 （强制 LF、把 `*.tgz` 标成二进制，避免 Windows 检出改坏行尾）。
 
-推上去之后，公司机器上有两条路：
+推上去之后，公司机器上装：
 
 ```sh
-# 1) 不用拷文件：直接从 GitHub 装（仓库根必须就是这个包）
-dsh plugin --profile web add github:<你的用户名>/dsh-annotation
-
-# 2) clone 下来本地装（推荐，能看到错误、能改）
-git clone https://github.com/<你的用户名>/dsh-annotation
-cd dsh-annotation
+git clone https://github.com/<你的用户名>/<仓库>.git
+cd <仓库>\dsh_plugin\dsh-annotation      # 包所在的目录，可以在任何深度
 node install.mjs
 ```
 
-`github:` 直装要求 `package.json` 在仓库根；如果把它塞进某个已有仓库的子目录，就用第 2 条（`install.mjs`
-按脚本自身位置工作，放在任何深度都行）。
+`install.mjs` 按**脚本自身位置**工作（会往上找 4 层 DSH checkout），所以包放在仓库的任意子目录都能装。
 
-`dsh-annotation-1.1.0.tgz` 是可选的**预打包产物**：方便在本机没有 pnpm/git 时一个文件搞定，但它会随源码改动而过期。
+> `dsh plugin add github:<用户名>/<仓库>` 这条直装**只认仓库根就是包**（`package.json` 在根）。
+> 本包是放在 `dsh_plugin/dsh-annotation/` 子目录里的，所以用上面的 clone + `node install.mjs`。
+> 如果你想用直装，就单独建一个仓库、把包的内容放在根。
+
+`dsh-annotation-1.2.0.tgz` 是可选的**预打包产物**：方便在本机没有 pnpm/git 时一个文件搞定，但它会随源码改动而过期。
 建议二选一——要么不提交 tgz（谁都现打），要么每次改完重新生成：
 
 ```sh
-pnpm --dir plugins/dsh-annotation pack --pack-destination plugins
+pnpm --dir plugins/dsh-annotation pack --pack-destination plugins   # 产出的 tgz 去掉 scope 前缀即可
 ```
 
 **做法：把整个 `dsh-annotation/` 目录带过去（U 盘 / 内网 git / scp 均可），然后：**
@@ -76,8 +95,8 @@ node install.mjs        # 默认装进 web profile
 等价的手工两步（任何平台）：
 
 ```sh
-pnpm pack --pack-destination <某个目录>
-dsh plugin --profile web add <那个目录>/local-dsh-annotation-1.1.0.tgz
+pnpm pack --pack-destination <某个目录>          # 产出 local-dsh-annotation-<版本>.tgz
+dsh plugin --profile web add <那个目录>/local-dsh-annotation-<版本>.tgz
 ```
 
 `dsh plugin add` 会把 tarball 复制进 profile 的包存储，并把 `@local/dsh-annotation` 加进
@@ -95,13 +114,14 @@ node install.mjs --profile desktop      # 桌面端
 node install.mjs --dry-run
 ```
 
-Windows 上已经处理掉的三件事：
+Windows 上已经处理掉的四件事：
 
 | 问题 | 处理 |
 |---|---|
 | 文件名非法字符 | 词的 `/ \ : * ? " < > \| # %` 会被换成 `-`，空白折成 `-` |
 | 保留设备名 | `CON`/`PRN`/`AUX`/`NUL`/`COM1-9`/`LPT1-9` 不能做文件名，这类词自动落成 `term-<8位摘要>.md` |
 | 路径长度 | 文件名截断到 60 字符；`<cwd>/notes/注解/<词>.md` 正常远低于 260 |
+| `.cmd` 启动不了 | `dsh`/`pnpm` 在 Windows 上是 `.cmd` 垫片，`spawn` 直接调用会失败；安装脚本改走 `cmd.exe /d /s /c` 并自己按 `CommandLineToArgvW` 规则转义，路径里有空格也不会断 |
 
 另外三点 Windows 事实：
 
@@ -109,13 +129,14 @@ Windows 上已经处理掉的三件事：
 - 笔记地址内部统一用 `/` 存储（`notes/注解/响应式.md`），Host 用 `node:path` 交叉处理，右侧栏定位不受盘符/反斜杠影响。
 - 大小写不敏感的 NTFS：`Foo` 和 `foo` 会落到同一个文件，`termFileIn()` 发现既有文件标题不同就自动加摘要后缀，不会把两个词混进一个文件。
 
-### 装之前要确认的三件事
+### 装之前要确认的四件事
 
 | 项 | 怎么确认 | 不满足会怎样 |
 |---|---|---|
 | `dsh` 命令可用 | `dsh --version`（Windows 上 `dsh.cmd` 同样可以）；源码 checkout 里脚本会自动退回 `pnpm -s dsh` | 脚本直接报错退出，并打印手工两步 |
 | profile 名 | Web 应用是 `web`；桌面端是 `desktop`（桌面端要先打开一次应用初始化 profile） | 装到了别的 profile，界面里看不到 |
 | DSH 版本兼容 | 见下节 | 不兼容时控制台 15 秒后会有一条明确警告，不会静默失效 |
+| **pnpm 在 PATH 上** | `pnpm --version`；没有就 `npm i -g pnpm` | `dsh plugin add` 内部调用 pnpm，缺了会直接失败 |
 
 ### 兼容性
 
@@ -166,6 +187,7 @@ DSH 里没有“改写已渲染消息里某个词”的通道，也没有注解�
 |---|---|---|
 | `notesDir` | `notes/注解` | 相对工作区；目录不存在会自动创建，每个词一个 `.md` |
 | `maxTokens` | `3000` | 解释的输出上限 |
+| — | — | 右键提示词上限 800 字符；输入框本身就限长，Host 收到超长值直接 400 |
 | `timeoutMs` | `120000` | 单次调用超时，同时用于页面断开时的中止 |
 | `provider` / `model` | 缺省 | 同时给出才生效；否则用 profile 的默认模型选择 |
 

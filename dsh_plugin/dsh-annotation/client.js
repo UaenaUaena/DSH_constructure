@@ -33,6 +33,8 @@ const ANCHOR_PROBE_MS = 15_000
 
 /** Bounds mirrored from the Host route so one request never exceeds them. */
 const MAX_WORD = 200
+/** Longest optional instruction the reader may attach before explaining. */
+const MAX_PROMPT = 800
 const MAX_PASSAGE = 3000
 const MAX_CONTEXT = 6000
 
@@ -51,6 +53,9 @@ const TABLE_RETRY_MAX_MS = 5_000
 /** Failed table reads reported to the console before going quiet. */
 const TABLE_FAILURE_LOGS = 3
 
+/** Named custom highlight that keeps the annotated range visible while the field types. */
+const SELECTION_HIGHLIGHT = 'dsh-annotation-selection'
+
 /** Trigger key; the floating button and the right-click menu do the same thing. */
 const SHORTCUT = { code: 'KeyE', altKey: true, shiftKey: true }
 
@@ -60,7 +65,8 @@ const zh = {
   'failed': '生成失败：{message}',
   'no-workspace': '当前会话没有工作目录，无法写入笔记',
   'bad-response': '响应缺少批注记录',
-  'shortcut': 'Alt+Shift+E',
+  'ask-placeholder': '可补充要求，回车解释；留空按默认',
+  'ask-hint': '回车解释 · Esc 取消',
 }
 
 const en = {
@@ -69,7 +75,8 @@ const en = {
   'failed': 'Failed: {message}',
   'no-workspace': 'This session has no workspace to write the note into',
   'bad-response': 'The response carried no annotation record',
-  'shortcut': 'Alt+Shift+E',
+  'ask-placeholder': 'Add a request, Enter to explain, empty for the default',
+  'ask-hint': 'Enter to explain · Esc to cancel',
 }
 
 const STYLE = `
@@ -109,6 +116,25 @@ const STYLE = `
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.${POP_CLASS}-ask {
+  box-sizing: border-box;
+  width: 260px;
+  max-width: 46vw;
+  padding: 3px 7px;
+  border: 1px solid var(--dsw-alias-border-l2, rgb(0 0 0 / 18%));
+  border-radius: 6px;
+  background: var(--dsw-alias-bg-base, transparent);
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+.${POP_CLASS}-ask:focus { border-color: var(--dsw-alias-brand-primary, #247bbf); }
+.${POP_CLASS}-ask::placeholder { color: var(--dsw-alias-label-secondary, #6b6b74); }
+::highlight(${SELECTION_HIGHLIGHT}) {
+  background-color: var(--dsw-alias-bg-layer-2, rgb(36 123 191 / 18%));
+  color: inherit;
 }
 .${POP_CLASS}-act:hover { background: var(--dsw-alias-bg-layer-2, rgb(0 0 0 / 6%)); }
 .${POP_CLASS}-act[disabled] { cursor: progress; color: var(--dsw-alias-label-secondary, #6b6b74); }
@@ -238,6 +264,7 @@ window.__ModuleLoader__.load({
           if (label === '' || word.length > MAX_WORD) return undefined
           return {
             node,
+            range,
             nodeKey: node.getAttribute('data-chat-node-key') ?? '',
             word,
             label,
@@ -432,21 +459,69 @@ window.__ModuleLoader__.load({
           onLinkActivate(event)
         }
 
+        /**
+         * Keep the annotated range visible while the instruction field owns the caret.
+         * Focusing an input is what makes typing immediate, and it is also what drops
+         * the native selection highlight — the button label and this paint carry it.
+         */
+        function paintSelection(range) {
+          const registry = globalThis.CSS?.highlights
+          if (registry === undefined || typeof globalThis.Highlight !== 'function') return
+          try {
+            registry.set(SELECTION_HIGHLIGHT, new globalThis.Highlight(range))
+          } catch {
+            // An engine that rejects the range simply shows no extra highlight.
+          }
+        }
+
+        /** Drop the painted range. */
+        function clearSelectionPaint() {
+          globalThis.CSS?.highlights?.delete(SELECTION_HIGHLIGHT)
+        }
+
         /** The floating trigger, created once and reused. */
         function popoverElement() {
           if (popover !== undefined) return popover
           const element = document.createElement('div')
           element.className = POP_CLASS
           element.setAttribute('role', 'dialog')
+          const ask = document.createElement('input')
+          ask.type = 'text'
+          ask.className = `${POP_CLASS}-ask`
+          ask.maxLength = MAX_PROMPT
+          ask.hidden = true
           const action = document.createElement('button')
           action.type = 'button'
           action.className = `${POP_CLASS}-act`
           const hint = document.createElement('span')
           hint.className = `${POP_CLASS}-hint`
-          element.append(action, hint)
-          element.addEventListener('mousedown', event => { event.preventDefault() })
+          element.append(ask, action, hint)
+          // Keep the transcript selection for the button, but let the field take focus.
+          element.addEventListener('mousedown', event => {
+            if (event.target === ask) return
+            event.preventDefault()
+          })
+          ask.addEventListener('keydown', event => {
+            event.stopPropagation()
+            const copy = (event.metaKey || event.ctrlKey) && !event.shiftKey && event.key.toLowerCase() === 'c'
+            if (copy && ask.value === '' && popover !== undefined && popover.copyText !== undefined) {
+              // The field took the caret away from the transcript, so Cmd/Ctrl+C
+              // on an empty field copies the word the reader actually selected.
+              event.preventDefault()
+              void navigator.clipboard?.writeText(popover.copyText)
+              hidePopover()
+              return
+            }
+            if (event.key === 'Enter') {
+              event.preventDefault()
+              popover?.submit()
+            } else if (event.key === 'Escape') {
+              event.preventDefault()
+              hidePopover()
+            }
+          })
           document.body.appendChild(element)
-          popover = { element, action, hint }
+          popover = { element, ask, action, hint, submit: () => {} }
           return popover
         }
 
@@ -467,29 +542,51 @@ window.__ModuleLoader__.load({
           element.style.visibility = 'visible'
         }
 
-        /** Show the trigger for one selection. */
+        /**
+         * Show the trigger for one selection and focus its field, so a selection is
+         * immediately typeable. Writing something is optional: submitting empty is
+         * exactly the default explanation.
+         * @param candidate - the captured selection facts, taken before focus moves.
+         * @param rect - where the trigger should appear.
+         */
         function showTrigger(candidate, rect) {
-          const { action, hint } = popoverElement()
-          hint.textContent = t('shortcut')
+          const trigger = popoverElement()
+          const { action, hint, ask: field } = trigger
+          trigger.submit = () => {
+            void explain(candidate, rect, field.value.trim())
+          }
+          trigger.copyText = candidate.word
+          field.hidden = false
+          field.value = ''
+          field.placeholder = t('ask-placeholder')
+          hint.textContent = t('ask-hint')
           action.disabled = false
           action.textContent = t('trigger', { word: candidate.label })
-          action.onclick = () => { void explain(candidate, rect) }
+          action.onclick = trigger.submit
           placePopover(rect)
+          paintSelection(candidate.range)
+          field.focus()
         }
 
-        /** Show a failure in place of the trigger label, keeping it open. */
-        function showFailure(candidate, rect, message) {
-          const { action, hint } = popoverElement()
+        /** Show a failure in place of the trigger label, keeping it open for a retry. */
+        function showFailure(candidate, rect, prompt, message) {
+          const trigger = popoverElement()
+          const { action, hint, ask: field } = trigger
+          // A retry may carry an edited instruction, not just the one that failed.
+          trigger.submit = () => { void explain(candidate, rect, field.hidden ? prompt : field.value.trim()) }
           hint.textContent = ''
           action.disabled = false
           action.textContent = t('failed', { message: String(message).slice(0, 160) })
-          action.onclick = () => { void explain(candidate, rect) }
+          action.onclick = trigger.submit
+          if (field.hidden !== true) field.value = prompt
           placePopover(rect)
         }
 
-        /** Hide the trigger. */
+        /** Hide the trigger, releasing focus so keystrokes return to the page. */
         function hidePopover() {
           if (popover === undefined) return
+          if (document.activeElement === popover.ask) popover.ask.blur()
+          clearSelectionPaint()
           popover.element.style.visibility = 'hidden'
         }
 
@@ -498,13 +595,18 @@ window.__ModuleLoader__.load({
           return popover !== undefined && event.target instanceof Node && popover.element.contains(event.target)
         }
 
-        /** Explain one selection: ask the Host, apply the link, open the note. */
-        async function explain(candidate, rect) {
+        /**
+         * Explain one selection: ask the Host, apply the link, open the note.
+         * @param candidate - the captured selection facts.
+         * @param rect - where a failure notice belongs.
+         * @param prompt - the reader's optional instruction; empty means the default explanation.
+         */
+        async function explain(candidate, rect, prompt) {
           if (busy) return
           const id = tableSession ?? domSession() ?? windowSession()
           const cwd = id === undefined ? undefined : cwdOf(id)
           if (id === undefined || cwd === undefined) {
-            showFailure(candidate, rect, t('no-workspace'))
+            showFailure(candidate, rect, prompt, t('no-workspace'))
             return
           }
           busy = true
@@ -526,6 +628,7 @@ window.__ModuleLoader__.load({
                 after: candidate.after,
                 passage: candidate.passage,
                 context: candidate.context,
+                prompt,
               }),
             })
             const payload = await response.json().catch(() => undefined)
@@ -538,7 +641,7 @@ window.__ModuleLoader__.load({
             rebuild()
             openNote(annotation)
           } catch (error) {
-            showFailure(candidate, rect, error instanceof Error ? error.message : String(error))
+            showFailure(candidate, rect, prompt, error instanceof Error ? error.message : String(error))
           } finally {
             busy = false
           }
@@ -599,6 +702,9 @@ window.__ModuleLoader__.load({
         }
 
         function onMouseUp(event) {
+          // A right click already opened the trigger through `contextmenu`; the
+          // trailing release must not replace it (macOS fires them in this order).
+          if (event.button !== 0) return
           if (insidePopover(event)) return
           window.setTimeout(() => {
             const candidate = readSelection()
@@ -621,7 +727,20 @@ window.__ModuleLoader__.load({
           showTrigger(candidate, new DOMRect(event.clientX, event.clientY, 0, 0))
         }
 
+        /** Whether a keystroke belongs to some other editable surface. */
+        function isEditable(target) {
+          return target instanceof Element && target.closest('input, textarea, [contenteditable="true"]') !== null
+        }
+
         function onKeyDown(event) {
+          if (event.key === 'Enter' && popover !== undefined && popover.element.style.visibility !== 'hidden') {
+            // The field owns its own Enter; anywhere else, Enter submits the open trigger.
+            if (popover.element.contains(event.target)) return
+            if (isEditable(event.target)) return
+            event.preventDefault()
+            popover.submit()
+            return
+          }
           if (event.code !== SHORTCUT.code || event.altKey !== SHORTCUT.altKey || event.shiftKey !== SHORTCUT.shiftKey) return
           const candidate = readSelection()
           if (candidate === undefined) return
@@ -636,7 +755,15 @@ window.__ModuleLoader__.load({
           hidePopover()
         }
 
+        function onEscape(event) {
+          if (event.key !== 'Escape' || popover === undefined) return
+          if (popover.element.style.visibility === 'hidden') return
+          hidePopover()
+        }
+
         function onScroll() {
+          // Typing must survive a scroll; the anchor may move, the draft may not vanish.
+          if (popover !== undefined && popover.element.contains(document.activeElement)) return
           hidePopover()
         }
 
@@ -645,6 +772,7 @@ window.__ModuleLoader__.load({
           [document, 'contextmenu', onContextMenu],
           [document, 'keydown', onKeyDown],
           [document, 'keydown', onLinkKey],
+          [document, 'keydown', onEscape],
           [document, 'mousedown', onPointerDown],
           [document, 'scroll', onScroll],
           [document, 'click', onLinkActivate],
@@ -672,6 +800,7 @@ window.__ModuleLoader__.load({
           if (tableTimer !== undefined) clearTimeout(tableTimer)
           tableTimer = undefined
           clearTimeout(anchorProbe)
+          clearSelectionPaint()
           for (const [target, type, handler] of listeners) target.removeEventListener(type, handler, capture.has(type))
           popover?.element.remove()
           popover = undefined

@@ -1,6 +1,6 @@
 {
   "name": "@local/dsh-annotation",
-  "version": "1.1.0",
+  "version": "1.3.2",
   "private": true,
   "type": "module",
   "description": "In-place annotation: select a term in the transcript, explain it inside the current conversation, and turn that word into a permanent link to the generated note.",
